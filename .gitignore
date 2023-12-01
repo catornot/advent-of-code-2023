@@ -21,3 +21,6 @@ Cargo.lock
 # replit
 .replit
 replit.nix
+
+# session
+session.txt

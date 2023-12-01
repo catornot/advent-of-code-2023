@@ -1,3 +1,10 @@
+use reqwest::{cookie::Jar,  Url, blocking};
+use std::fs;
+
+mod day1;
+
+use crate::day1::Day1;
+
 pub trait Day {
     fn example_input(&self) -> &'static str;
     fn example_solution(&self) -> (&'static str, &'static str);
@@ -6,10 +13,6 @@ pub trait Day {
 }
 
 const YEAR: usize = 2023;
-
-mod day1;
-
-use crate::day1::Day1;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -23,7 +26,23 @@ fn main() {
 
     println!("solution for day {day} part {part}");
 
-    let input = reqwest::blocking::get(format!("https://adventofcode.com/{YEAR}/day/{day}/input"))
+    let jar = Jar::default();
+    jar.add_cookie_str(
+        &format!("session={}", fs::read_to_string("session.txt").unwrap()),
+        &format!("https://adventofcode.com/{YEAR}/day/{day}/input")
+            .parse::<Url>()
+            .unwrap(),
+    );
+
+    let client = blocking::Client::builder()
+        .cookie_store(true)
+        .cookie_provider(std::sync::Arc::new(jar))
+        .build()
+        .expect("couldn't build request client");
+
+    let input = client
+        .get(format!("https://adventofcode.com/{YEAR}/day/{day}/input"))
+        .send()
         .expect("couldn't get advent of code input for this day :(")
         .text()
         .expect("couldn't get the request as string");
