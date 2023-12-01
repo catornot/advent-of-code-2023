@@ -1,4 +1,4 @@
-use reqwest::{cookie::Jar,  Url, blocking};
+use reqwest::{blocking, cookie::Jar, Url};
 use std::fs;
 
 mod day1;
@@ -6,7 +6,7 @@ mod day1;
 use crate::day1::Day1;
 
 pub trait Day {
-    fn example_input(&self) -> &'static str;
+    fn example_input(&self) -> (&'static str, &'static str);
     fn example_solution(&self) -> (&'static str, &'static str);
     fn part_1(&mut self, input: String) -> String;
     fn part_2(&mut self, input: String) -> String;
@@ -47,13 +47,15 @@ fn main() {
         .text()
         .expect("couldn't get the request as string");
 
+    let input = fs::read_to_string("input.txt").unwrap(); //temp
+
     let mut days: Vec<Box<dyn Day>> = vec![Box::new(DummyDay), Box::new(Day1)];
     let day = days.get_mut(day).expect("day not implemented");
 
     assert_eq!(
         (
-            day.part_1(day.example_input().to_string()).as_str(),
-            day.part_2(day.example_input().to_string()).as_str(),
+            day.part_1(day.example_input().0.to_string()).as_str(),
+            day.part_2(day.example_input().1.to_string()).as_str(),
         ),
         day.example_solution()
     );
@@ -82,8 +84,8 @@ impl Day for DummyDay {
         input.parse::<i32>().unwrap().to_string()
     }
 
-    fn example_input(&self) -> &'static str {
-        "0"
+    fn example_input(&self) -> (&'static str, &'static str) {
+        ("0", "0")
     }
 
     fn example_solution(&self) -> (&'static str, &'static str) {
