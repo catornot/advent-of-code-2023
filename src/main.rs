@@ -2,8 +2,9 @@ use reqwest::{blocking, cookie::Jar, Url};
 use std::fs;
 
 mod day1;
+mod day2;
 
-use crate::day1::Day1;
+use crate::{day1::Day1, day2::Day2};
 
 pub trait Day {
     fn example_input(&self) -> (&'static str, &'static str);
@@ -45,9 +46,11 @@ fn main() {
         .send()
         .expect("couldn't get advent of code input for this day :(")
         .text()
-        .expect("couldn't get the request as string").trim_end().to_string();
+        .expect("couldn't get the request as string")
+        .trim_end()
+        .to_string();
 
-    let mut days: Vec<Box<dyn Day>> = vec![Box::new(DummyDay), Box::new(Day1)];
+    let mut days: Vec<Box<dyn Day>> = vec![Box::new(DummyDay), Box::new(Day1), Box::new(Day2)];
     let day = days.get_mut(day).expect("day not implemented");
 
     assert_eq!(

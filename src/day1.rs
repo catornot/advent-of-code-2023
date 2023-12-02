@@ -3,7 +3,7 @@ use crate::Day;
 pub struct Day1;
 
 const DIGITS: [&str; 10] = [
-    "87367633976396983768936789368938678376836738679837689376",
+    "nullnullnull",
     "one",
     "two",
     "three",
@@ -22,9 +22,6 @@ impl Day for Day1 {
 		pqr3stu8vwx
 		a1b2c3d4e5f
 		treb7uchet"#,
-            //           r#"two1two
-            // eightnineninenine
-            //       five54232five"#,
             r#"two1nine
             eightwothree
             abcone2threexyz
