@@ -22,13 +22,16 @@ impl Day for Day1 {
 		pqr3stu8vwx
 		a1b2c3d4e5f
 		treb7uchet"#,
+            //           r#"two1two
+            // eightnineninenine
+            //       five54232five"#,
             r#"two1nine
-		eightwothree
-		abcone2threexyz
-		xtwone3four
-		4nineeightseven2
-		zoneight234
-		7pqrstsixteen"#,
+            eightwothree
+            abcone2threexyz
+            xtwone3four
+            4nineeightseven2
+            zoneight234
+            7pqrstsixteen"#,
         )
     }
 
@@ -48,14 +51,16 @@ impl Day for Day1 {
         input
             .split('\n')
             .map(|line| {
-                let mut mod_line = line.to_string();
                 let mut digits = DIGITS
                     .iter()
                     .enumerate()
-                    .filter_map(|(i, digit)| {
-                        mod_line = mod_line.replace(str_value, "");
-                        Some((mod_line.find(digit)?, i))
+                    .map(|(i, digit)| {
+                        find_all(line.to_string(), &digit)
+                            .into_iter()
+                            .map(|index| (index, i))
+                            .collect::<Vec<(usize, usize)>>()
                     })
+                    .flatten()
                     .collect::<Vec<(usize, usize)>>();
                 digits.extend(
                     line.chars()
@@ -75,8 +80,6 @@ impl Day for Day1 {
                 let r = format!("{}{}", digits[0].1, digits.last().unwrap().1)
                     .parse::<i32>()
                     .unwrap();
-
-                println!("{r} : {line}");
                 r
             })
             .sum::<i32>()
@@ -93,4 +96,14 @@ fn parse_line(chars: std::str::Chars) -> i32 {
     )
     .parse::<i32>()
     .unwrap()
+}
+
+fn find_all(mut search_str: String, search_for: &str) -> Vec<usize> {
+    let fill = search_for.chars().map(|_| ' ').collect::<String>();
+    let mut buf = Vec::new();
+    while let Some(index) = &search_str.find(search_for) {
+        buf.push(*index);
+        search_str = search_str.replacen(search_for, &fill, 1);
+    }
+    buf
 }

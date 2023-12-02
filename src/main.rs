@@ -45,9 +45,7 @@ fn main() {
         .send()
         .expect("couldn't get advent of code input for this day :(")
         .text()
-        .expect("couldn't get the request as string");
-
-    let input = fs::read_to_string("input.txt").unwrap(); //temp
+        .expect("couldn't get the request as string").trim_end().to_string();
 
     let mut days: Vec<Box<dyn Day>> = vec![Box::new(DummyDay), Box::new(Day1)];
     let day = days.get_mut(day).expect("day not implemented");
