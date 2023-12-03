@@ -3,8 +3,9 @@ use std::fs;
 
 mod day1;
 mod day2;
+mod day3;
 
-use crate::{day1::Day1, day2::Day2};
+use crate::{day1::Day1, day2::Day2, day3::Day3};
 
 pub trait Day {
     fn example_input(&self) -> (&'static str, &'static str);
@@ -16,6 +17,8 @@ pub trait Day {
 const YEAR: usize = 2023;
 
 fn main() {
+    std::env::set_var("RUST_BACKTRACE", "1");
+
     let args: Vec<String> = std::env::args().collect();
 
     let (Some(day), Some(part)) = (
@@ -50,7 +53,12 @@ fn main() {
         .trim_end()
         .to_string();
 
-    let mut days: Vec<Box<dyn Day>> = vec![Box::new(DummyDay), Box::new(Day1), Box::new(Day2)];
+    let mut days: Vec<Box<dyn Day>> = vec![
+        Box::new(DummyDay),
+        Box::new(Day1),
+        Box::new(Day2),
+        Box::new(Day3),
+    ];
     let day = days.get_mut(day).expect("day not implemented");
 
     assert_eq!(
