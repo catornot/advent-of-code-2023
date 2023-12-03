@@ -1,4 +1,4 @@
-use std::{collections::HashSet, ops::Not};
+use std::ops::Not;
 
 use crate::Day;
 
@@ -120,7 +120,7 @@ impl Day for Day3 {
 
                 Some(
                     find_close_number(&all_pos, symbol_pos, &board.board)
-                        .map(|info| dbg!(info.1) * dbg!(cell.0))
+                        .map(|info| info.1 * cell.0)
                         .unwrap_or_else(|| 0),
                 )
             })
@@ -202,9 +202,9 @@ fn cell_as_number_strict(cell: &CellType) -> Option<(usize, usize)> {
 
 fn cell_as_number(cell: &CellType, strip: &[CellType]) -> Option<(usize, usize)> {
     match cell {
-        CellType::Number(number, 0) => Some((*number, 0)),
-        CellType::NumberRef(index) => Some((cell_as_number(&strip[*index], strip)?.0, *index)),
-        _ => None?,
+        CellType::Number(number, _) => Some((*number, 0)),
+        CellType::NumberRef(index) => Some(((cell_as_number(&strip[*index], strip))?.0, *index)),
+        _ => None,
     }
 }
 
@@ -247,40 +247,6 @@ fn find_close_number(
     pos: [usize; 2],
     board: &[Vec<CellType>],
 ) -> Option<([usize; 2], usize)> {
-    _ = ((-1_isize..=1)
-        .into_iter()
-        .map(|y| (-1..=1).map(move |x| [y, x]))
-        .flatten()
-        .filter_map(|[y, x]| {
-            Some([
-                usize::try_from((pos[0] as isize) + y).ok()?,
-                usize::try_from((pos[1] as isize) + x).ok()?,
-            ])
-        })
-        .filter_map(|[strip_index, index]| {
-            Some((board.get(strip_index)?.get(index)?, [strip_index, index]))
-        })
-        .filter_map(|(maybe_number, [strip_index, mut index])| {
-            Some((
-                cell_as_number(maybe_number, &board[strip_index]).map(|(value, new_index)| {
-                    index.eq(&0).not().then_some(|| index = new_index);
-                    value
-                })?,
-                [strip_index, index],
-            ))
-        })
-        .filter(|(_, other_pos)| {
-            original_number_pos
-                .iter()
-                .find(|original| **original == *other_pos)
-                .is_none()
-        })
-        .map(|(_, other_pos)| other_pos)
-        .collect::<HashSet<[usize; 2]>>()
-        .len()
-        != 1)
-        .then_some(|| Some(()))?; // check for multiples
-
     (-1_isize..=1)
         .into_iter()
         .map(|y| (-1..=1).map(move |x| [y, x]))
@@ -297,13 +263,14 @@ fn find_close_number(
         .filter_map(|(maybe_number, [strip_index, mut index])| {
             Some((
                 cell_as_number(maybe_number, &board[strip_index]).map(|(value, new_index)| {
-                    index.eq(&0).not().then_some(|| index = new_index);
+                    new_index.eq(&0).not().then_some(|| index = new_index);
                     value
                 })?,
                 [strip_index, index],
             ))
         })
         .find(|(_, other_pos)| {
+            (original_number_pos, other_pos);
             original_number_pos
                 .iter()
                 .find(|original| **original == *other_pos)
