@@ -1,12 +1,13 @@
 use reqwest::{blocking, cookie::Jar, Url};
-use std::fs;
+use std::{fs, path::Path};
 
 mod day1;
 mod day2;
 mod day3;
 mod day4;
+mod day5;
 
-use crate::{day1::Day1, day2::Day2, day3::Day3, day4::Day4};
+use crate::{day1::Day1, day2::Day2, day3::Day3, day4::Day4, day5::Day5};
 
 pub trait Day {
     fn example_input(&self) -> (&'static str, &'static str);
@@ -28,6 +29,10 @@ fn main() {
     ) else {
         return eprintln!("app < day: usize > < part: usize >");
     };
+
+    if !Path::new("session.txt").exists() {
+        return eprint!("session.txt doesn't exists!");
+    }
 
     println!("solution for day {day} part {part}");
 
@@ -54,14 +59,13 @@ fn main() {
         .trim_end()
         .to_string();
 
-    let input = std::fs::read_to_string("input.txt").unwrap();
-
     let mut days: Vec<Box<dyn Day>> = vec![
         Box::new(DummyDay),
         Box::new(Day1),
         Box::new(Day2),
         Box::new(Day3),
         Box::new(Day4),
+        Box::new(Day5),
     ];
     let day = days.get_mut(day).expect("day not implemented");
 
