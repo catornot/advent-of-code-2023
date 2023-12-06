@@ -58,28 +58,34 @@ impl MapTransition {
     }
 
     fn transition_range(&self, ids: Range<u64>) -> Option<(Range<u64>, Option<Range<u64>>)> {
-        if self.source.start < ids.start && ids.end < self.source.end {
-            let start = self.start_destination + (ids.start - self.source.start);
-            Some((start..(start + (ids.end - ids.start)), None))
-            // space pls
-        } else if self.source.start < ids.start && ids.start < self.source.end {
-            let remainder = self.source.end - ids.start + 1;
-            let start = self.start_destination + (ids.start - self.source.start);
-            Some((
-                start..(start + (self.source.end - ids.start)),
-                Some(ids.start..(ids.start + remainder)),
-            ))
-            // space pls
-        } else if self.source.start < ids.end && ids.end < self.source.end {
-            let start = self.start_destination + (ids.end - self.source.start);
-            let remainder = ids.end - self.source.start;
-            Some((
-                start..(start + (self.source.end - ids.end)),
-                Some(ids.start..(ids.start + remainder)),
-            ))
-            // space pls
-        } else {
-            None
+        match (
+            self.source.contains(&ids.start),
+            self.source.contains(&ids.end),
+        ) {
+            (true, true) => {
+                debug_print_ids(&ids, "match all");
+                let start = self.start_destination + (ids.start - self.source.start);
+                Some((start..(start + (ids.end - ids.start)), None))
+            }
+            (true, false) => {
+                debug_print_ids(&ids, "match start");
+                let remainder = self.source.end - ids.start + 1;
+                let start = self.start_destination + (ids.start - self.source.start);
+                Some((
+                    start..(start + (self.source.end - ids.start)),
+                    Some(ids.start..(ids.start + remainder)),
+                ))
+            }
+            (false, true) => {
+                debug_print_ids(&ids, "match end");
+                let start = self.start_destination + (ids.end - self.source.start);
+                let remainder = ids.end - self.source.start;
+                Some((
+                    start..(start + (self.source.end - ids.end)),
+                    Some(ids.start..(ids.start + remainder)),
+                ))
+            }
+            _ => None,
         }
     }
 }
@@ -163,18 +169,7 @@ humidity-to-location map:
             .map(|[start, lenght]| start..(start + lenght))
             .collect::<Vec<Range<u64>>>();
 
-        println!(
-            "{}",
-            current_ids
-                .iter()
-                .map(|ids| ids
-                    .clone()
-                    .into_iter()
-                    .map(|id| id.to_string() + ",")
-                    .collect::<String>()
-                    + "|")
-                .collect::<String>()
-        );
+        debug_print_vec_ids(&current_ids);
         while let Some(transitions) = parse_transition(&mut lines) {
             current_ids = (current_ids)
                 .iter()
@@ -188,19 +183,9 @@ humidity-to-location map:
                 })
                 .flatten()
                 .collect::<Vec<Range<u64>>>();
-            println!(
-                "{}",
-                current_ids
-                    .iter()
-                    .map(|ids| ids
-                        .clone()
-                        .into_iter()
-                        .map(|id| id.to_string() + ",")
-                        .collect::<String>()
-                        + "|")
-                    .collect::<String>()
-            );
+            println!("\n");
         }
+        debug_print_vec_ids(&current_ids);
 
         current_ids.sort_by(|it, other| it.start.cmp(&other.start));
         current_ids
@@ -275,6 +260,7 @@ fn check_ranges(ids: Range<u64>, transitions: &[MapTransition]) -> Vec<Range<u64
             // })
         })
         // .flatten()
+        .filter(|ids| ids.is_empty().not())
         .collect::<Vec<Range<u64>>>();
     // .flatten()
     // .filter(|id| id.start != u64::MAX)
@@ -289,3 +275,29 @@ fn check_ranges(ids: Range<u64>, transitions: &[MapTransition]) -> Vec<Range<u64
 }
 
 // so big brain idea here in transition_range also offset the original range like in transition since that's what I forgot
+
+fn debug_print_vec_ids(current_ids: &[Range<u64>]) {
+    println!(
+        "{}",
+        current_ids
+            .iter()
+            .map(|ids| ids
+                .clone()
+                .into_iter()
+                .map(|id| id.to_string() + ",")
+                .collect::<String>()
+                + "|")
+            .collect::<String>()
+    );
+}
+
+fn debug_print_ids(ids: &Range<u64>, msg: &str) {
+    print!(
+        "{}{}|",
+        ids.clone()
+            .into_iter()
+            .map(|id| id.to_string() + ",")
+            .collect::<String>(),
+        msg
+    );
+}
