@@ -1,6 +1,5 @@
 use itertools::Itertools;
 use std::{
-    collections::HashSet,
     hash::Hash,
     ops::{Not, Range},
     str::Split,
@@ -12,6 +11,7 @@ struct RangeCmp<T: Ord + Eq + PartialEq + PartialOrd + Hash> {
     r: Range<T>,
 }
 
+#[allow(unused)]
 impl<T: Ord + Eq + PartialEq + PartialOrd + Hash> RangeCmp<T> {
     fn new(range: Range<T>) -> Self {
         Self { r: range }
@@ -42,6 +42,14 @@ impl<T: Ord + Eq + PartialEq + PartialOrd + Hash> Eq for RangeCmp<T> {}
 // impl<T: Ord + Eq + PartialEq + PartialOrd> PartialOrd for RangeCmp<T> {}
 // impl<T: Ord + Eq + PartialEq + PartialOrd> Ord for RangeCmp<T> {}
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum MatchedOn {
+    Full,
+    End,
+    Start,
+    None,
+}
+
 #[derive(Debug, Clone)]
 struct MapTransition {
     source: Range<u64>,
@@ -57,35 +65,41 @@ impl MapTransition {
         }
     }
 
-    fn transition_range(&self, ids: Range<u64>) -> Option<(Range<u64>, Option<Range<u64>>)> {
+    fn transition_range(
+        &self,
+        ids: Range<u64>,
+    ) -> (MatchedOn, Option<(Range<u64>, Option<Range<u64>>)>) {
         match (
             self.source.contains(&ids.start),
             self.source.contains(&ids.end),
         ) {
             (true, true) => {
-                debug_print_ids(&ids, "match all");
                 let start = self.start_destination + (ids.start - self.source.start);
-                Some((start..(start + (ids.end - ids.start)), None))
+                let new_range = start..(start + (ids.end - ids.start));
+                debug_print_ids(&self.source, &new_range, "match all");
+                (MatchedOn::Full, Some((new_range, None)))
             }
             (true, false) => {
-                debug_print_ids(&ids, "match start");
-                let remainder = self.source.end - ids.start + 1;
+                let remainder = self.source.end - ids.start;
                 let start = self.start_destination + (ids.start - self.source.start);
-                Some((
-                    start..(start + (self.source.end - ids.start)),
-                    Some(ids.start..(ids.start + remainder)),
-                ))
+                let new_range = start..(start + (self.source.end - ids.start));
+                debug_print_ids(&self.source, &new_range, "match start");
+                (
+                    MatchedOn::Start,
+                    Some((new_range, Some(ids.start..(ids.start + remainder)))),
+                )
             }
             (false, true) => {
-                debug_print_ids(&ids, "match end");
-                let start = self.start_destination + (ids.end - self.source.start);
+                let start = self.start_destination + (ids.end - self.source.start - 1);
                 let remainder = ids.end - self.source.start;
-                Some((
-                    start..(start + (self.source.end - ids.end)),
-                    Some(ids.start..(ids.start + remainder)),
-                ))
+                let new_range = start..(start + (self.source.end - ids.end));
+                debug_print_ids(&self.source, &new_range, "match end");
+                (
+                    MatchedOn::End,
+                    Some((new_range, Some(ids.start..(ids.start + remainder)))),
+                )
             }
-            _ => None,
+            _ => (MatchedOn::None, None),
         }
     }
 }
@@ -169,6 +183,7 @@ humidity-to-location map:
             .map(|[start, lenght]| start..(start + lenght))
             .collect::<Vec<Range<u64>>>();
 
+        let mut cycle = 0;
         debug_print_vec_ids(&current_ids);
         while let Some(transitions) = parse_transition(&mut lines) {
             current_ids = (current_ids)
@@ -183,7 +198,8 @@ humidity-to-location map:
                 })
                 .flatten()
                 .collect::<Vec<Range<u64>>>();
-            println!("\n");
+            cycle += 1;
+            println!("%{cycle}\n");
         }
         debug_print_vec_ids(&current_ids);
 
@@ -242,12 +258,13 @@ fn check_ranges(ids: Range<u64>, transitions: &[MapTransition]) -> Vec<Range<u64
     let mut ranges = transitions
         .iter()
         .filter_map(|rule| {
-            rule.transition_range(ids.clone()).map(|ids| {
+            let (matched, ids) = rule.transition_range(ids.clone());
+            ids.map(|ids| {
                 ids.1.map(|ids| {
                     remainders += 1;
                     remainder = Some(ids)
                 });
-                ids.0
+                (matched, ids.0)
             })
             // .map(|ids| [ids.0, ids.1.unwrap_or_else(|| u64::MAX..u64::MAX)])
             //     .map(|ids| {
@@ -260,8 +277,8 @@ fn check_ranges(ids: Range<u64>, transitions: &[MapTransition]) -> Vec<Range<u64
             // })
         })
         // .flatten()
-        .filter(|ids| ids.is_empty().not())
-        .collect::<Vec<Range<u64>>>();
+        .filter(|(_, ids)| ids.is_empty().not())
+        .collect::<Vec<(MatchedOn, Range<u64>)>>();
     // .flatten()
     // .filter(|id| id.start != u64::MAX)
     // .map(|ids| RangeCmp::new(ids))
@@ -270,8 +287,14 @@ fn check_ranges(ids: Range<u64>, transitions: &[MapTransition]) -> Vec<Range<u64
     // .map(|range| range.into())
     // .collect() // super bad but there is no other way :(
 
-    remainders.eq(&1).then(|| Some(ranges.push(remainder?)));
+    remainders
+        .eq(&1)
+        .then(|| Some(ranges.push((MatchedOn::None, remainder?))));
     ranges
+        .iter()
+        .find(|(matched, _)| *matched == MatchedOn::Full)
+        .map(|(_, full)| vec![full.clone()])
+        .unwrap_or_else(|| ranges.into_iter().map(|(_, part)| part).collect())
 }
 
 // so big brain idea here in transition_range also offset the original range like in transition since that's what I forgot
@@ -291,9 +314,10 @@ fn debug_print_vec_ids(current_ids: &[Range<u64>]) {
     );
 }
 
-fn debug_print_ids(ids: &Range<u64>, msg: &str) {
+fn debug_print_ids(source: &Range<u64>, ids: &Range<u64>, msg: &str) {
     print!(
-        "{}{}|",
+        "{:?}:{}{}|",
+        source.clone(),
         ids.clone()
             .into_iter()
             .map(|id| id.to_string() + ",")

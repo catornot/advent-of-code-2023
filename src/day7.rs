@@ -118,9 +118,9 @@ QQQJA 483"#;
             .map(|(i, hand)| (i as u64 + 1, hand))
             .map(|(i, hand)| hand.bid * i)
             .sum::<u64>()
-            .to_string();
+            .to_string()
 
-        "".into()
+        // "".into()
     }
 }
 
@@ -143,6 +143,7 @@ fn get_hand_types(hand: &str) -> Vec<HandType> {
 fn get_hand_types_wildcard(hand: &str) -> Vec<HandType> {
     let mut checked = Vec::with_capacity(hand.len());
     hand.chars()
+        .filter(|c| *c != 'J')
         .filter_map(|c| {
             checked
                 .iter()
@@ -181,7 +182,7 @@ fn get_hand_type(mut handtypes: Vec<HandType>) -> HandType {
     handtypes.sort();
     *dbg!(handtypes)
         .last()
-        .expect("handtypes has to have smth at least :(")
+        .unwrap_or_else(|| &HandType::HighCard)
 }
 
 fn card_char_to_order(c: char) -> u8 {
