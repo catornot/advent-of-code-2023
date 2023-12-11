@@ -1,4 +1,3 @@
-
 use crate::Day;
 
 pub struct Day16;
