@@ -31,6 +31,23 @@ impl Day for Day11 {
 
         // todo implement doubling yk
 
+        let mut offest = 0usize;
+        galatic_map.len();
+        for x in (0..(galatic_map[0].len()))
+            .into_iter()
+            .filter_map(|x| {
+                (0..len)
+                    .into_iter()
+                    .map(move |y| [x, y])
+                    .fold(false, |found, [x, y]| found || galatic_map[y][x] == '#')
+                    .then(move || x)
+            })
+            .collect::<Vec<usize>>()
+        {
+            galatic_map.insert(x + offset, galatic_map.get(x + offset).clone());
+            offest += 1;
+        }
+
         let len = galatic_map.len();
         (0..(galatic_map[0].len()))
             .into_iter()
@@ -41,7 +58,7 @@ impl Day for Day11 {
                     return 0;
                 }
 
-                galatic_map.iter()
+                galatic_map.iter();
 
                 todo!()
             })
