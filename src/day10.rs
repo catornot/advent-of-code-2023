@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use itertools::{Itertools, Position};
 
 use crate::Day;
