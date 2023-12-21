@@ -1,3 +1,4 @@
+use core::panic;
 use std::collections::HashMap;
 
 use crate::Day;
@@ -8,17 +9,24 @@ type WorkFlowID<'a> = &'a str;
 
 #[derive(Debug)]
 enum Op {
-    Greater(u64),
-    Less(u64),
+    Greater(usize, u64),
+    Less(usize, u64),
 }
 
 impl Op {
-    fn does_pass(&self, value: u64) -> bool {
+    fn does_pass(&self, part: &Part) -> bool {
         match self {
-            Self::Greater(cmp) => value > *cmp,
-            Self::Less(cmp) => value < *cmp,
+            Self::Greater(index, cmp) => part[*index] > *cmp,
+            Self::Less(index, cmp) => part[*index] < *cmp,
         }
     }
+}
+
+enum TaskProcessed<'a> {
+    Reject,
+    Accept,
+    Send(WorkFlowID<'a>),
+    None,
 }
 
 #[derive(Debug)]
@@ -43,13 +51,17 @@ impl<'a> Task<'a> {
                         .then(|| {
                             condition
                                 .split_once('>')
-                                .map(|(_, cmp)| Op::Greater(cmp.parse().unwrap()))
+                                .map(|(symbol, cmp)| {
+                                    Op::Greater(symbol_to_index(symbol), cmp.parse().unwrap())
+                                })
                                 .unwrap()
                         })
                         .unwrap_or_else(|| {
                             condition
                                 .split_once('<')
-                                .map(|(_, cmp)| Op::Less(cmp.parse().unwrap()))
+                                .map(|(symbol, cmp)| {
+                                    Op::Less(symbol_to_index(symbol), cmp.parse().unwrap())
+                                })
                                 .unwrap()
                         }),
                     jump,
@@ -93,17 +105,73 @@ hdj{m>838:A,pv}
     }
 
     fn part_1(&mut self, input: String) -> String {
-        dbg!(input
+        let workflow = input
             .lines()
-            .take_while(|line| line.len() < 3)
-            .fold(HashMap::new(), new_workflow));
+            .take_while(|line| line.len() >= 3)
+            .fold(HashMap::new(), new_workflow);
 
-        todo!()
+        let mut reached_parts = false;
+        input
+            .lines()
+            .skip_while(|line| {
+                !((line.len() < 3).then(|| reached_parts = true).is_some() || reached_parts)
+            })
+            .filter(|line| line.len() > 2)
+            .map(|part| {
+                part[1..part.len() - 1]
+                    .split(',')
+                    .map(|value| {
+                        value
+                            .split_once('=')
+                            .expect("parts should have a = sign")
+                            .1
+                            .parse()
+                            .expect("parts should have a number")
+                    })
+                    .collect::<Part>()
+            })
+            .filter(|part| is_accpeted(part, &workflow))
+            .map(|part| part.into_iter().sum::<u64>())
+            .sum::<u64>()
+            .to_string()
     }
 
     fn part_2(&mut self, input: String) -> String {
         _ = input;
         "".to_string()
+    }
+}
+
+fn is_accpeted<'a>(part: &Part, workflows: &HashMap<&'a str, Vec<Task<'a>>>) -> bool {
+    let mut next_id = "in";
+    loop {
+        let tasks = workflows
+            .get(next_id)
+            .expect("workflow should contain every id");
+
+        for task in tasks.into_iter() {
+            match process_task(task, part) {
+                TaskProcessed::Reject => return false,
+                TaskProcessed::Accept => return true,
+                TaskProcessed::Send(id) => {
+                    next_id = id;
+                    break;
+                }
+                TaskProcessed::None => {}
+            }
+        }
+    }
+}
+
+fn process_task<'a>(task: &'a Task<'a>, part: &Part) -> TaskProcessed<'a> {
+    match task {
+        Task::Reject => TaskProcessed::Reject,
+        Task::Accept => TaskProcessed::Accept,
+        Task::Condition(op, next_task) => op
+            .does_pass(part)
+            .then(|| process_task(&next_task, part))
+            .unwrap_or_else(|| TaskProcessed::None),
+        Task::Send(id) => TaskProcessed::Send(id),
     }
 }
 
@@ -126,4 +194,13 @@ fn new_workflow<'a>(
             .collect(),
     );
     workflows
+}
+fn symbol_to_index(symbol: &str) -> usize {
+    match symbol {
+        "x" => 0,
+        "m" => 1,
+        "a" => 2,
+        "s" => 3,
+        _ => panic!("invalid symbol"),
+    }
 }
